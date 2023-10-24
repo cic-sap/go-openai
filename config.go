@@ -19,14 +19,15 @@ const (
 	APITypeOpenAI  APIType = "OPEN_AI"
 	APITypeAzure   APIType = "AZURE"
 	APITypeAzureAD APIType = "AZURE_AD"
+	APITypeSapBtp  APIType = "Sap_Btp"
 )
 
 const AzureAPIKeyHeader = "api-key"
 
 // ClientConfig is a configuration of a client.
 type ClientConfig struct {
-	authToken string
-
+	authToken            string
+	btpKey               *BtpKey
 	BaseURL              string
 	OrgID                string
 	APIType              APIType
@@ -50,6 +51,19 @@ func DefaultConfig(authToken string) ClientConfig {
 	}
 }
 
+func DefaultSapBtpConfig(key *BtpKey) ClientConfig {
+
+	return ClientConfig{
+		btpKey:  key,
+		BaseURL: key.Url,
+		APIType: APITypeSapBtp,
+		OrgID:   "",
+
+		HTTPClient: &http.Client{},
+
+		EmptyMessagesLimit: defaultEmptyMessagesLimit,
+	}
+}
 func DefaultAzureConfig(apiKey, baseURL string) ClientConfig {
 	return ClientConfig{
 		authToken:  apiKey,

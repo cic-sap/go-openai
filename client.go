@@ -226,6 +226,9 @@ func (c *Client) fullURL(suffix string, args ...any) string {
 			azureDeploymentName, suffix, c.config.APIVersion,
 		)
 	}
+	if c.config.APIType == APITypeSapBtp {
+		return fmt.Sprintf("%s%s", c.config.BaseURL, "/api/v1/completions")
+	}
 
 	// c.config.APIType == APITypeOpenAI || c.config.APIType == ""
 	return fmt.Sprintf("%s%s", c.config.BaseURL, suffix)

@@ -1,8 +1,11 @@
 package openai
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 )
 
@@ -161,8 +164,42 @@ func (c *Client) CreateChatCompletion(
 		err = ErrChatCompletionInvalidModel
 		return
 	}
+	var setters []requestOption
 
-	req, err := c.newRequest(ctx, http.MethodPost, c.fullURL(urlSuffix, request.Model), withBody(request))
+	withSapBtpHeader := func(req ChatCompletionRequest) func(r *requestOptions) {
+		return func(r *requestOptions) {
+			token, err := c.config.btpKey.GetToken()
+			if err != nil {
+				log.Println("Error getting token from btpKey: ", err)
+			}
+			if token != "" {
+				r.header.Set("Authorization", "Bearer "+token)
+			}
+			type BtpChatRequest struct {
+				ChatCompletionRequest
+				Model        string `json:"model"`
+				DeploymentId string `json:"deployment_id"`
+			}
+			req2 := BtpChatRequest{
+				ChatCompletionRequest: req,
+			}
+			req2.DeploymentId = req.Model
+			buf, err := json.Marshal(req2)
+			if err != nil {
+				log.Println("err", err)
+			}
+			//set body
+			reader := bytes.NewBufferString("")
+			reader.Write(buf)
+			r.body = reader
+		}
+	}
+	setters = append(setters, withBody(request))
+
+	if APITypeSapBtp == c.config.APIType {
+		setters = append(setters, withSapBtpHeader(request))
+	}
+	req, err := c.newRequest(ctx, http.MethodPost, c.fullURL(urlSuffix, request.Model), setters...)
 	if err != nil {
 		return
 	}
